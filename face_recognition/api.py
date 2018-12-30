@@ -13,8 +13,11 @@ except Exception:
 
 face_detector = dlib.get_frontal_face_detector()
 
+_default_pose_predictor = "small"
 predictor_68_point_model = face_recognition_models.pose_predictor_model_location()
-pose_predictor_68_point = dlib.shape_predictor(predictor_68_point_model)
+if predictor_68_point_model:
+    _default_pose_predictor = "large"
+    pose_predictor_68_point = dlib.shape_predictor(predictor_68_point_model)
 
 predictor_5_point_model = face_recognition_models.pose_predictor_five_point_model_location()
 pose_predictor_5_point = dlib.shape_predictor(predictor_5_point_model)
@@ -148,27 +151,27 @@ def batch_face_locations(images, number_of_times_to_upsample=1, batch_size=128):
     return list(map(convert_cnn_detections_to_css, raw_detections_batched))
 
 
-def _raw_face_landmarks(face_image, face_locations=None, model="large"):
+def _raw_face_landmarks(face_image, face_locations=None, model=_default_pose_predictor):
     if face_locations is None:
         face_locations = _raw_face_locations(face_image)
     else:
         face_locations = [_css_to_rect(face_location) for face_location in face_locations]
 
-    pose_predictor = pose_predictor_68_point
-
     if model == "small":
         pose_predictor = pose_predictor_5_point
+    else:
+        pose_predictor = predictor_68_point_model
 
     return [pose_predictor(face_image, face_location) for face_location in face_locations]
 
 
-def face_landmarks(face_image, face_locations=None, model="large"):
+def face_landmarks(face_image, face_locations=None, model=_default_pose_predictor):
     """
     Given an image, returns a dict of face feature locations (eyes, nose, etc) for each face in the image
 
     :param face_image: image to search
     :param face_locations: Optionally provide a list of face locations to check.
-    :param model: Optional - which model to use. "large" (default) or "small" which only returns 5 points but is faster.
+    :param model: Optional - which model to use. "large" (default if available) or "small" which only returns 5 points but is faster.
     :return: A list of dicts of face feature locations (eyes, nose, etc)
     """
     landmarks = _raw_face_landmarks(face_image, face_locations, model)
